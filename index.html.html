@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>TITAN MONACO IDE - FULL POWER</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --bg: #1e1e1e; --top: #333; --accent: #007acc; --text: #fff; }
+        body.light { --bg: #fffffe; --top: #f3f3f3; --accent: #007acc; --text: #333; }
+        * { box-sizing: border-box; }
+        body { margin: 0; height: 100vh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font-family: sans-serif; overflow: hidden; }
+        
+        /* 5. LINK DẪN & TOOLBAR */
+        .top-nav { height: 40px; background: var(--top); display: flex; align-items: center; padding: 0 15px; gap: 20px; border-bottom: 1px solid #000; font-size: 13px; }
+        .external-links a { color: var(--accent); text-decoration: none; font-weight: bold; margin-right: 15px; font-size: 12px; }
+        .external-links a:hover { text-decoration: underline; }
+
+        .main-layout { flex: 1; display: flex; overflow: hidden; }
+        #editor-container { flex: 1; border-right: 2px solid #333; }
+        .preview-pane { width: 40%; background: white; display: flex; flex-direction: column; }
+        iframe { flex: 1; border: none; width: 100%; height: 100%; background: white; }
+
+        .file-bar { height: 35px; background: var(--top); display: flex; gap: 2px; }
+        .file-tab { padding: 0 20px; display: flex; align-items: center; cursor: pointer; background: #2d2d2d; font-size: 12px; opacity: 0.6; }
+        .file-tab.active { background: var(--bg); opacity: 1; border-top: 2px solid var(--accent); }
+
+        .btn { cursor: pointer; padding: 5px 10px; border-radius: 3px; background: var(--accent); color: white; border: none; font-size: 12px; }
+    </style>
+</head>
+<body class="dark">
+
+    <header class="top-nav">
+        <b style="color:var(--accent)">TITAN MONACO</b>
+        <div class="external-links">
+            <a href="https://google.com" target="_blank">Google</a>
+            <a href="https://github.com" target="_blank">GitHub</a>
+            <a href="https://stackoverflow.com" target="_blank">StackOverflow</a>
+            <a href="https://www.w3schools.com" target="_blank">W3Schools</a>
+        </div>
+        <button class="btn" onclick="saveFile()"><i class="fa fa-save"></i> 10. LƯU FILE</button>
+        <input type="file" id="openFile" style="display:none" onchange="loadFile(event)">
+        <button class="btn" onclick="document.getElementById('openFile').click()">MỞ FILE</button>
+        <button class="btn" onclick="toggleTheme()">SÁNG/TỐI</button>
+        <div style="flex:1"></div>
+        <div id="status" style="font-size:11px; opacity:0.7">Monaco Engine Active</div>
+    </header>
+
+    <div class="main-layout">
+        <div id="editor-container">
+            <div class="file-bar">
+                <div class="file-tab active" onclick="switchLang('html')">index.html</div>
+                <div class="file-tab" onclick="switchLang('css')">style.css</div>
+                <div class="file-tab" onclick="switchLang('javascript')">script.js</div>
+            </div>
+            <div id="monaco-root" style="height: calc(100% - 35px);"></div>
+        </div>
+        
+        <div class="preview-pane">
+            <iframe id="output"></iframe>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.min.js"></script>
+    <script>
+        let editor;
+        let models = {};
+        let currentLang = 'html';
+
+        // 4. SIÊU TẠO THỨ (BOILERPLATE)
+        const initialCode = {
+            html: `<!DOCTYPE html>\n<html>\n<head>\n  <title>Titan Page</title>\n</head>\n<body>\n  <h1>Sẵn sàng!</h1>\n</body>\n</html>`,
+            css: `body { background: #f0f0f0; font-family: sans-serif; text-align: center; }`,
+            javascript: `console.log("Titan Monaco Integrated");`
+        };
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
+
+        require(['vs/editor/editor.main'], function() {
+            // Khởi tạo Models (Files)
+            models.html = monaco.editor.createModel(initialCode.html, 'html');
+            models.css = monaco.editor.createModel(initialCode.css, 'css');
+            models.javascript = monaco.editor.createModel(initialCode.javascript, 'javascript');
+
+            // 1. GỢI Ý SIÊU VIỆT & 9. MỌI THỨ DÙNG ĐƯỢC
+            editor = monaco.editor.create(document.getElementById('monaco-root'), {
+                model: models.html,
+                theme: 'vs-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                tabSize: 2,
+                minimap: { enabled: false },
+                // 2. EMMET CƠ BẢN (Native Monaco hỗ trợ một phần, ta thêm snippet)
+                suggestOnTriggerCharacters: true
+            });
+
+            // 2. EMMET (HỖ TRỢ ! TAB, h1 TAB)
+            monaco.languages.registerCompletionItemProvider('html', {
+                provideCompletionItems: (model, position) => {
+                    const word = model.getWordUntilPosition(position);
+                    const range = {
+                        startLineNumber: position.lineNumber,
+                        endLineNumber: position.lineNumber,
+                        startColumn: word.startColumn,
+                        endColumn: word.endColumn
+                    };
+                    return {
+                        suggestions: [
+                            { label: '!', kind: monaco.languages.CompletionItemKind.Snippet, insertText: initialCode.html, range: range, detail: 'HTML5 Boilerplate' },
+                            { label: 'h1', kind: monaco.languages.CompletionItemKind.Snippet, insertText: '<h1>$1</h1>', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range },
+                            { label: 'div', kind: monaco.languages.CompletionItemKind.Snippet, insertText: '<div class="$1">$2</div>', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet, range: range }
+                        ]
+                    };
+                }
+            });
+
+            // 3. SIÊU PHÍM TẮT (MONACO CÓ SẴN CTRL+/, ALT+UP/DOWN)
+            editor.onDidChangeModelContent(() => {
+                updatePreview();
+            });
+
+            updatePreview();
+        });
+
+        function switchLang(lang) {
+            currentLang = lang;
+            editor.setModel(models[lang]);
+            document.querySelectorAll('.file-tab').forEach(t => {
+                t.classList.toggle('active', t.innerText.toLowerCase().includes(lang));
+            });
+        }
+
+        function updatePreview() {
+            const html = models.html.getValue();
+            const css = `<style>${models.css.getValue()}</style>`;
+            const js = `<script>${models.javascript.getValue()}<\/script>`;
+            const output = document.getElementById('output');
+            output.srcdoc = html + css + js;
+        }
+
+        // 6. NỀN SÁNG NỀN TỐI
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('light');
+            monaco.editor.setTheme(isDark ? 'vs' : 'vs-dark');
+        }
+
+        // 10. LÀM VIỆC VỚI FILE
+        function saveFile() {
+            const blob = new Blob([models[currentLang].getValue()], {type: "text/plain"});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `titan_export.${currentLang === 'javascript' ? 'js' : currentLang}`;
+            a.click();
+        }
+
+        function loadFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const content = ev.target.result;
+                const ext = file.name.split('.').pop();
+                if(models[ext] || (ext === 'js' && models.javascript)) {
+                    const target = ext === 'js' ? 'javascript' : ext;
+                    models[target].setValue(content);
+                    switchLang(target);
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
